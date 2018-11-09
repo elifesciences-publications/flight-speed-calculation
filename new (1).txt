@@ -1,0 +1,140 @@
+   file="F:/behavior data 2018 june/9-11-2018/9-11-2018 ZI Nos ChR2 animal3.txt"
+   read.table(file,header=T,sep="\t")->velocity
+   
+  file="F:/behavior data 2018 june/9-11-2018/9_11_2018_order_pen1_-1_time ZI Nos ChR2 animal3.txt"
+  read.table(file,header=F,sep="")->stimulustime
+   
+   speed<-velocity[,2]
+   speed<-speed[2:length(speed)]-speed[1:(length(speed)-1)]
+   speed[length(speed)+1]<-speed[length(speed)]
+   for (k in 2:(length(speed)-1)){ 
+    if (abs(speed[k])>=1000)
+      {
+         speed[k]<-(speed[k-1]+speed[k+1])/2
+      }
+   }
+ 
+   
+   
+   
+   TimeStamp<-as.character(velocity[,4])
+   
+   timechange<-function(artime){           ###exchange function
+      rtime<-as.character(artime)
+
+      filelength<-length(strsplit(rtime,NULL)[[1]]) 
+      if (filelength==12)
+       {
+         shi<-as.numeric(substring(rtime,1,2))
+         fen<-as.numeric(substring(rtime,4,5))
+         miao<-as.numeric(substring(rtime,7,8))
+         micromiao<-as.numeric(substring(rtime,10,12))
+       }
+      else {
+         shi<-as.numeric(substring(rtime,12,13))
+         fen<-as.numeric(substring(rtime,15,16))
+         miao<-as.numeric(substring(rtime,18,19))
+         micromiao<-as.numeric(substring(rtime,21,23))
+       }
+	   if (shi <8)
+         {
+            shi<-shi+12
+         }
+	      nt<-(shi*3600+fen*60+miao)*10+ round(micromiao*0.01+0.5)
+      nt
+   }
+   #startt<-timechange(starttime)           ####start time, s
+   #endt<-timechange(endtime)               ####end time, s
+   
+   timechangestart<-function(artime){           ###exchange function
+      rtime<-as.character(artime)
+      filelength<-length(strsplit(rtime,NULL)[[1]]) 
+      times<-11
+         shi<-as.numeric(substring(rtime,1+times,2+times))
+         fen<-as.numeric(substring(rtime,4+times,5+times))
+         miao<-as.numeric(substring(rtime,7+times,8+times))
+         micromiao<-as.numeric(substring(rtime,10+times,12+times))
+		 if (shi <8)
+         {
+            shi<-shi+12
+         }
+		 fen<-fen-1
+      nt<-(shi*3600+fen*60+miao)*10+ round(micromiao*0.01+0.5)
+      nt
+   }
+   
+    timechangeend<-function(artime){           ###exchange function
+      rtime<-as.character(artime)
+      filelength<-length(strsplit(rtime,NULL)[[1]]) 
+      times<-11
+         shi<-as.numeric(substring(rtime,1+times,2+times))
+         fen<-as.numeric(substring(rtime,4+times,5+times))
+         miao<-as.numeric(substring(rtime,7+times,8+times))
+         micromiao<-as.numeric(substring(rtime,10+times,12+times))
+		 if (shi <8)
+         {
+            shi<-shi+12
+         }
+		 fen<-fen+1
+      nt<-(shi*3600+fen*60+miao)*10+ round(micromiao*0.01+0.5)
+      nt
+   }
+   
+  timeac<-sapply(TimeStamp, timechange)
+  
+
+  timewh<-as.character(stimulustime[,1])      ###exchange runing time to second
+  stime<-as.character(stimulustime[1,1])
+  etime<-as.character(stimulustime[dim(stimulustime)[1],1])
+  startt<-timechangestart(stime)
+  endt<-timechangeend(etime)
+  timewh<-sapply(timewh, timechange)
+
+
+   
+   velocitydata<-rbind(timeac,speed)
+   velocitydata<-t(velocitydata)
+   recordp<-velocitydata[velocitydata[,1]>=startt & velocitydata[,1]<=endt,] ###get the recording segment
+
+  recordp[,1]<- recordp[,1]-startt                    ####
+
+  timewh<-timewh-startt
+
+  
+ velo1<-matrix(0, nrow = length(timewh), ncol=4001)
+ lastj<-1
+ for (k in 1:(length(timewh))){ 
+    for (j in lastj:(length(recordp[,1]))){ 
+      if(recordp[j,1]==timewh[k])
+      {
+         lastj<-j
+         break
+      }
+    }
+     if (lastj<1000)
+       {
+        velo1[k,(4002-length(0:(lastj+3000))):4000]<-recordp[0:(lastj+3000),2]
+        }
+    else
+        {
+        velo1[k,]<-recordp[(lastj-1000):(lastj+3000),2]
+        }
+ }
+ 
+  velo110<-matrix(0, nrow = length(velo1[,1]), ncol=400)
+  velo111<-matrix(0, nrow = 200, ncol=400)
+ for (k in 1:(length(velo1[,1]))){ 
+    for (j in 1:400){ 
+          velo110[k,j]<-sum(velo1[k,((j-1)*10+1):(j*10)])
+    }
+
+ }
+ velo110<--t(velo110)
+
+ 
+ 
+ filelength<-length(strsplit(file,NULL)[[1]])-3 
+ file<-paste(substring(file,1,filelength),"csv",sep='') 
+ write.table(velo110,file,sep=",",col.names = F,row.names = F) 
+
+ 
